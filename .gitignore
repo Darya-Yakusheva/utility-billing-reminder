@@ -22,13 +22,10 @@ Dockerfile
 
 # Local files
 local/**
-!local/.gitkeep
-!local/migrations/
-!local/migrations/**
 
 # Session files
 sessions/
-!sessions/.gitkeep
+
 
 # pytest caches and reports
 .pytest_cache/
