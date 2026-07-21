@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Env & secrets
+.env
+.env.*
+
+# Editors / IDE
+.vscode/
+.idea/
+
+# Build-related files
+Dockerfile
+.dockerignore
+
+# Local files
+local/**
+!local/.gitkeep
+!local/migrations/
+!local/migrations/**
+
+# Session files
+sessions/
+!sessions/.gitkeep
+
+# pytest caches and reports
+.pytest_cache/
+.cache/
+
+# Coverage data files
+.coverage
