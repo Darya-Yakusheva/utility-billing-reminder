@@ -1,0 +1,427 @@
+{
+  "name": "utility-billing",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "hour": 10
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "has:attachment",
+          "readStatus": "unread",
+          "sender": "noreply@aguasdoporto.pt"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -608,
+        0
+      ],
+      "id": "b7372cef-8f2c-4fb0-942b-763ea593495f",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Find an unread email from water supply company with an attachment"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        0
+      ],
+      "id": "1af55a14-c57b-4646-9a1d-7c0b15db33bd",
+      "name": "Extract from File",
+      "alwaysOutputData": false,
+      "notesInFlow": false,
+      "notes": "Extract text from PDF from the attachment"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract email ID from Gmail trigger\nconst emailId = $('Gmail Trigger').first().json.id || $('Gmail Trigger').first().json.messageId || \"Not found\";\n\n// Extract text from the previous node\nconst rawText = $input.item.json.text || $input.item.json.data || \"\";\n\n// Define regular expressions for search (in JS they are enclosed in slashes)\nconst amountRegex = /(\\d{1,3},\\d{2})\\s*€.+?Valor a Pagar/s;\nconst dueDateRegex = /(\\d{4}-\\d{2}-\\d{2}).+?Pagar até/s;\nconst billingPeriodRegex = /Período Faturação:\\s*(\\d{4}-\\d{2}-\\d{2} ~ \\d{4}-\\d{2}-\\d{2})/;\nconst meterReadingWindowRegex = /(\\d{4}-\\d{2}-\\d{2} ~ \\d{4}-\\d{2}-\\d{2}).+?Período de Comunicação/s;\n\n// Search for matches in the raw text and immediately extract data or set to \"Not found\"\nconst amount = rawText.match(amountRegex)?.[1] || \"Not found\";\nconst dueDate = rawText.match(dueDateRegex)?.[1] || \"Not found\";\nconst billingPeriod = rawText.match(billingPeriodRegex)?.[1] || \"Not found\";\nconst meterReadingWindow = rawText.match(meterReadingWindowRegex)?.[1] || \"Not found\";\n\n// Calculate billing month if billing period was found\nconst billingMonth = billingPeriod !== \"Not found\" ? new Date(billingPeriod.slice(0, 7)).toLocaleString('en-US', { month: 'long' }) : \"Not found\";\n\n// Format and return the final result\n// If a match is found, extract group 1 [1]; otherwise, return \"Not found\"\nreturn {\n    \"Email ID\": emailId,\n    \"Billing Period\": billingPeriod,\n    \"Billing Month\": billingMonth,\n    \"Amount\": amount,\n    \"Due Date\": dueDate,\n    \"Meter Reading Window\": meterReadingWindow\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "e7ba43ef-8158-4531-8fe0-1160e6a64dfb",
+      "name": "Code: extract data",
+      "notes": "Extract necessary information from text"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "water",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Email ID"
+          ],
+          "schema": [
+            {
+              "id": "Email ID",
+              "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Billing Period",
+              "displayName": "Billing Period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Billing Month",
+              "displayName": "Billing Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meter Reading Window",
+              "displayName": "Meter Reading Window",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice link",
+              "displayName": "Invoice link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Payment Task ID",
+              "displayName": "Payment Task ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meter Reading Task ID",
+              "displayName": "Meter Reading Task ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -112,
+        0
+      ],
+      "id": "23ed4001-17e5-41e4-9467-3dc8d3233ba1",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleApi": {
+          "name": "Google Service Account account"
+        }
+      },
+      "notes": "Add a row in a Google Sheet to use data for tasks creation"
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "value": "YOUR_TODOIST_PROJECT_ID",
+          "mode": "id",
+          "cachedResultName": "Home"
+        },
+        "content": "=Pay water bill for {{$json[\"Billing Month\"]}}, amount: € {{$json[\"Amount\"]}}",
+        "options": {
+          "description": "=Billing Period: {{ $json[\"Billing Period\"] }}\n",
+          "dueDateTime": "={{ $json[\"Due Date\"] }}",
+          "priority": 1
+        }
+      },
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        -160
+      ],
+      "id": "24298345-cfa0-4007-aee0-255eea39e023",
+      "name": "Create a payment task",
+      "credentials": {
+        "todoistApi": {
+          "name": "Todoist account"
+        }
+      },
+      "notes": "Create task to pay the bill"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "water",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Payment Task ID": "={{ $json.id }}",
+            "Email ID": "={{ $('Code: extract data').item.json['Email ID'] }}"
+          },
+          "matchingColumns": [
+            "Email ID"
+          ],
+          "schema": [
+            {
+              "id": "Email ID",
+              "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Billing Period",
+              "displayName": "Billing Period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Billing Month",
+              "displayName": "Billing Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meter Reading Window",
+              "displayName": "Meter Reading Window",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice link",
+              "displayName": "Invoice link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Task ID",
+              "displayName": "Payment Task ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meter Reading Task ID",
+              "displayName": "Meter Reading Task ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        272,
+        -160
+      ],
+      "id": "05aabd97-4693-48f7-9dbd-259f5e0fb4ea",
+      "name": "Append or update row",
+      "credentials": {
+        "googleApi": {
+          "name": "Google Service Account account"
+        }
+      },
+      "notes": "Add a payment task ID to the Google Sheet"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code: extract data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: extract data": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Create a payment task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a payment task": {
+      "main": [
+        [
+          {
+            "node": "Append or update row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
