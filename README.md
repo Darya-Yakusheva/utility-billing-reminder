@@ -4,17 +4,20 @@ An automated data pipeline designed to parse incoming utility bills, ensuring
 timely payments and significantly reducing the cognitive load of tracking
 financial deadlines manually.
 
-n8n automation for **Águas do Porto** water bills: catch the invoice email, parse the PDF, log it, and create a Todoist payment task — or email an alert if parsing fails.
+n8n automation for **Águas do Porto** water bills: catch the invoice email, skip duplicates, parse the PDF, log it, and create a Todoist payment task — or email an alert if parsing fails.
 
 ## Pipeline
 
 ```
 Gmail Trigger
-  → Extract from File (PDF)
-  → Code: extract data (regex)
-  → If (Billing Period, Amount, Due Date all found)
-       ├─ true  → Google Sheets upsert → Todoist payment task → write Task ID back to Sheet
-       └─ false → Gmail alert (manual review; no Sheet row, no Todoist task)
+  → Lookup email ID in sheet
+  → Email is new?
+       ├─ false → stop (already processed; no Sheet/Todoist)
+       └─ true  → Extract invoice PDF text
+                    → Parse invoice fields
+                    → Required fields found?
+                         ├─ true  → Upsert invoice row → Create payment task → Write payment task ID to sheet
+                         └─ false → Send parse failure alert
 ```
 
 ## Input
@@ -22,6 +25,13 @@ Gmail Trigger
 - **Source:** Gmail Trigger (poll ~daily)
 - **Filters:** sender `noreply@aguasdoporto.pt`, unread, `has:attachment`
 - **Payload:** PDF attachment downloaded and converted to text
+
+## Deduplication
+
+Before PDF extract/parse, the workflow looks up the Gmail message **Email ID** in Google Sheets.
+
+- If the ID already exists → stop (no second row, no second Todoist task)
+- If not → continue with extract → parse → success/fail paths
 
 ## Parsing
 
@@ -39,7 +49,7 @@ Missing required fields become `"Not found"`. If **Billing Period**, **Amount**,
 
 ## Output (success path)
 
-- **Google Sheets:** upsert by **Email ID** (dedupe key — one row per email/message)
+- **Google Sheets:** upsert by **Email ID**
 - **Todoist:** payment task with month + amount in the title, due date from the invoice, billing period in the description
 - **Sheet follow-up:** Payment Task ID written back to the same row
 
@@ -49,7 +59,7 @@ Invoice PDF → Google Drive / `Invoice link`, and a meter-reading Todoist task,
 
 - **n8n** — orchestration (Docker)
 - **Gmail API** — trigger + parse-failure alerts
-- **Google Sheets API** — archive + dedupe
+- **Google Sheets API** — archive + early dedupe + upsert
 - **Todoist API** — payment deadlines
 
 ## Workflow export
