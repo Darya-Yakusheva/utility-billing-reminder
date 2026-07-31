@@ -28,6 +28,7 @@
       ],
       "id": "b7372cef-8f2c-4fb0-942b-763ea593495f",
       "name": "Gmail Trigger",
+      "retryOnFail": true,
       "credentials": {
         "gmailOAuth2": {
           "name": "Gmail account"
@@ -165,8 +166,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        848,
-        -128
+        896,
+        -224
       ],
       "id": "05aabd97-4693-48f7-9dbd-259f5e0fb4ea",
       "name": "Write payment task ID to sheet",
@@ -187,8 +188,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        464,
-        112
+        448,
+        144
       ],
       "id": "143107d1-eaf0-4563-bd6b-5769b1fdc563",
       "name": "Send parse failure alert",
@@ -227,15 +228,15 @@
         "content": "=Pay water bill for {{$json[\"Billing Month\"]}}, amount: € {{$json[\"Amount\"]}}",
         "options": {
           "description": "=Billing Period: {{ $json[\"Billing Period\"] }}\n",
-          "dueDateTime": "={{ $json[\"Due Date\"] }}",
-          "priority": 1
+          "priority": 1,
+          "dueDate": "={{ $json['Due Date'] }}"
         }
       },
       "type": "n8n-nodes-base.todoist",
       "typeVersion": 2.2,
       "position": [
-        656,
-        -128
+        704,
+        -224
       ],
       "id": "24298345-cfa0-4007-aee0-255eea39e023",
       "name": "Create payment task",
@@ -456,8 +457,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        464,
-        -80
+        512,
+        -112
       ],
       "id": "23ed4001-17e5-41e4-9467-3dc8d3233ba1",
       "name": "Upsert invoice row",
@@ -502,6 +503,168 @@
       "id": "a965d16e-f56e-4814-9906-847e7e283c89",
       "name": "Email is new?",
       "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "value": "YOUR_TODOIST_PROJECT_ID",
+          "mode": "id",
+          "cachedResultName": "Home 🏡"
+        },
+        "content": "=Communicate water meter reading",
+        "options": {
+          "description": "={{ $json['Meter Reading Window'] !== 'Not found'\n  ? 'Meter Reading Window: ' + $json['Meter Reading Window']\n  : 'Meter Reading Window not found, check manually.\\n\\nEmail: https://mail.google.com/mail/u/0/#all/' + $('Gmail Trigger').item.json.id\n}}\n\nYOUR_METER_READING_PORTAL_URL",
+          "dueDate": "={{ $json['Meter Reading Window'] !== 'Not found'\n  ? $json['Meter Reading Window'].slice(13, 23)\n  : ''\n}}"
+        }
+      },
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 2.2,
+      "position": [
+        704,
+        -16
+      ],
+      "id": "fccb1f86-053d-44d9-b159-6582c5f68342",
+      "name": "Create meter reading task",
+      "credentials": {
+        "todoistApi": {
+          "name": "Todoist account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "water",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Meter Reading Task ID": "={{ $json.id }}",
+            "Email ID": "={{ $('Parse invoice fields').item.json['Email ID'] }}"
+          },
+          "matchingColumns": [
+            "Email ID"
+          ],
+          "schema": [
+            {
+              "id": "Email ID",
+              "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Billing Period",
+              "displayName": "Billing Period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Billing Month",
+              "displayName": "Billing Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meter Reading Window",
+              "displayName": "Meter Reading Window",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice link",
+              "displayName": "Invoice link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Payment Task ID",
+              "displayName": "Payment Task ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meter Reading Task ID",
+              "displayName": "Meter Reading Task ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "8feaac5c-3082-4519-8ee8-93ec5fd9b2b9",
+      "name": "Write meter reading task ID to sheet",
+      "credentials": {
+        "googleApi": {
+          "name": "Google Service Account account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -586,6 +749,11 @@
             "node": "Create payment task",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Create meter reading task",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -601,15 +769,32 @@
         ],
         []
       ]
+    },
+    "Create meter reading task": {
+      "main": [
+        [
+          {
+            "node": "Write meter reading task ID to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Lisbon",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner"
   },
   "meta": {
     "templateCredsSetupCompleted": true
   },
+  "nodeGroups": [],
   "tags": []
 }
