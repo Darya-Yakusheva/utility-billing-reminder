@@ -227,7 +227,7 @@
         },
         "content": "=Pay water bill for {{$json[\"Billing Month\"]}}, amount: € {{$json[\"Amount\"]}}",
         "options": {
-          "description": "=Billing Period: {{ $json[\"Billing Period\"] }}\n",
+          "description": "=Billing Period: {{ $json[\"Billing Period\"] }}\nInvoice link: {{ $json['Invoice link'] }}",
           "priority": 1,
           "dueDate": "={{ $json['Due Date'] }}"
         }
