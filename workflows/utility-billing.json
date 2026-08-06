@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract email ID from Gmail trigger\nconst emailId = $('Gmail Trigger').first().json.id || $('Gmail Trigger').first().json.messageId || \"Not found\";\n\n// Extract text from the previous node\nconst rawText = $input.item.json.text || $input.item.json.data || \"\";\n\n// Define regular expressions for search (in JS they are enclosed in slashes)\nconst amountRegex = /(\\d{1,3},\\d{2})\\s*€\\s*Valor a Pagar/;\nconst dueDateRegex = /(\\d{4}-\\d{2}-\\d{2})\\s*Pagar até/;\nconst billingPeriodRegex = /Período Faturação:\\s*(\\d{4}-\\d{2}-\\d{2} ~ \\d{4}-\\d{2}-\\d{2})/;\nconst meterReadingWindowRegex = /(\\d{4}-\\d{2}-\\d{2} ~ \\d{4}-\\d{2}-\\d{2})\\s*Período de Comunicação/;\n\n// Search for matches in the raw text and immediately extract data or set to \"Not found\"\nconst amount = rawText.match(amountRegex)?.[1] || \"Not found\";\nconst dueDate = rawText.match(dueDateRegex)?.[1] || \"Not found\";\nconst billingPeriod = rawText.match(billingPeriodRegex)?.[1] || \"Not found\";\nconst meterReadingWindow = rawText.match(meterReadingWindowRegex)?.[1] || \"Not found\";\n\n// Calculate billing month if billing period was found\nconst billingMonth = billingPeriod !== \"Not found\" ? new Date(billingPeriod.slice(0, 7)).toLocaleString('en-US', { month: 'long' }) : \"Not found\";\n\n// Format and return the final result\n// If a match is found, extract group 1 [1]; otherwise, return \"Not found\"\nreturn {\n    \"Email ID\": emailId,\n    \"Billing Period\": billingPeriod,\n    \"Billing Month\": billingMonth,\n    \"Amount\": amount,\n    \"Due Date\": dueDate,\n    \"Meter Reading Window\": meterReadingWindow\n};"
+        "jsCode": "// Extract email ID from Gmail trigger\nconst emailId = $('Gmail Trigger').first().json.id || $('Gmail Trigger').first().json.messageId || \"Not found\";\n\n// Extract text from the previous node\nconst rawText = $input.item.json.text || $input.item.json.data || \"\";\n\n// Define regular expressions for search (in JS they are enclosed in slashes)\nconst invoiceDateRegex = /Emissão:\\s*(\\d{4}-\\d{2}-\\d{2})/\nconst amountRegex = /(\\d{1,3},\\d{2})\\s*€\\s*Valor a Pagar/;\nconst dueDateRegex = /(\\d{4}-\\d{2}-\\d{2})\\s*Pagar até/;\nconst billingPeriodRegex = /Período Faturação:\\s*(\\d{4}-\\d{2}-\\d{2} ~ \\d{4}-\\d{2}-\\d{2})/;\nconst meterReadingWindowRegex = /(\\d{4}-\\d{2}-\\d{2} ~ \\d{4}-\\d{2}-\\d{2})\\s*Período de Comunicação/;\n\n// Search for matches in the raw text and immediately extract data or set to \"Not found\"\nconst invoiceDate = rawText.match(invoiceDateRegex)?.[1] || $('Gmail Trigger').first().json.date.slice(0, 10);\nconst amount = rawText.match(amountRegex)?.[1] || \"Not found\";\nconst dueDate = rawText.match(dueDateRegex)?.[1] || \"Not found\";\nconst billingPeriod = rawText.match(billingPeriodRegex)?.[1] || \"Not found\";\nconst meterReadingWindow = rawText.match(meterReadingWindowRegex)?.[1] || \"Not found\";\n\n// Calculate billing month if billing period was found\nconst billingMonth = billingPeriod !== \"Not found\" ? new Date(billingPeriod.slice(0, 7)).toLocaleString('en-US', { month: 'long' }) : \"Not found\";\n\n// Format and return the final result\n// If a match is found, extract group 1 [1]; otherwise, return \"Not found\"\nreturn {\n    \"Invoice Date\": invoiceDate,\n    \"Email ID\": emailId,\n    \"Billing Period\": billingPeriod,\n    \"Billing Month\": billingMonth,\n    \"Amount\": amount,\n    \"Due Date\": dueDate,\n    \"Meter Reading Window\": meterReadingWindow\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -166,7 +166,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        896,
+        1104,
         -224
       ],
       "id": "05aabd97-4693-48f7-9dbd-259f5e0fb4ea",
@@ -182,13 +182,13 @@
       "parameters": {
         "sendTo": "YOUR_EMAIL@example.com",
         "subject": "Water bill parsing error",
-        "message": "=Failed to parse the water bill received on {{ $('Gmail Trigger').item.json.headers.date.slice(6, 17) }}.\nPlease review it manually: https://mail.google.com/mail/u/0/#all/{{ $('Gmail Trigger').item.json.id }}.",
+        "message": "=Failed to parse the water bill received on {{ $('Gmail Trigger').item.json.headers.date.slice(6, 17) }}.\nPlease review it manually: https://drive.google.com/file/d/{{ $('Upload invoice to Drive').item.json.id }}",
         "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        448,
+        656,
         144
       ],
       "id": "143107d1-eaf0-4563-bd6b-5769b1fdc563",
@@ -235,7 +235,7 @@
       "type": "n8n-nodes-base.todoist",
       "typeVersion": 2.2,
       "position": [
-        704,
+        912,
         -224
       ],
       "id": "24298345-cfa0-4007-aee0-255eea39e023",
@@ -297,7 +297,7 @@
           "conditions": [
             {
               "id": "f723aa89-ae13-4f2d-aa28-3bdbfe05fcd2",
-              "leftValue": "={{ $json['Billing Period'] }}",
+              "leftValue": "={{ $('Parse invoice fields').item.json['Billing Period'] }}",
               "rightValue": "Not found",
               "operator": {
                 "type": "string",
@@ -306,7 +306,7 @@
             },
             {
               "id": "0844d858-1918-404d-b8f2-1f228306b789",
-              "leftValue": "={{ $json.Amount }}",
+              "leftValue": "={{ $('Parse invoice fields').item.json.Amount }}",
               "rightValue": "Not found",
               "operator": {
                 "type": "string",
@@ -315,7 +315,7 @@
             },
             {
               "id": "b1f76cde-0d0c-4390-8165-3bd6ded47455",
-              "leftValue": "={{ $json['Due Date'] }}",
+              "leftValue": "={{ $('Parse invoice fields').item.json['Due Date'] }}",
               "rightValue": "Not found",
               "operator": {
                 "type": "string",
@@ -330,7 +330,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        288,
+        496,
         0
       ],
       "id": "4421ec5b-8af4-4e1c-b881-58d30febedd2",
@@ -352,8 +352,17 @@
           "mode": "name"
         },
         "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email ID": "={{ $('Gmail Trigger').item.json.id }}",
+            "Invoice Date": "={{ $('Parse invoice fields').item.json['Invoice Date'] }}",
+            "Billing Period": "={{ $('Parse invoice fields').item.json['Billing Period'] }}",
+            "Billing Month": "={{ $('Parse invoice fields').item.json['Billing Month'] }}",
+            "Amount": "={{ $('Parse invoice fields').item.json.Amount }}",
+            "Due Date": "={{ $('Parse invoice fields').item.json['Due Date'] }}",
+            "Meter Reading Window": "={{ $('Parse invoice fields').item.json['Meter Reading Window'] }}",
+            "Invoice link": "=https://drive.google.com/file/d/{{ $('Upload invoice to Drive').item.json.id }}"
+          },
           "matchingColumns": [
             "Email ID"
           ],
@@ -361,6 +370,26 @@
             {
               "id": "Email ID",
               "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice link",
+              "displayName": "Invoice link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice Date",
+              "displayName": "Invoice Date",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -419,16 +448,6 @@
               "removed": false
             },
             {
-              "id": "Invoice link",
-              "displayName": "Invoice link",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
               "id": "Payment Task ID",
               "displayName": "Payment Task ID",
               "required": false,
@@ -436,7 +455,7 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": false
+              "removed": true
             },
             {
               "id": "Meter Reading Task ID",
@@ -446,7 +465,447 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": false
+              "removed": true
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "mimeType",
+              "displayName": "mimeType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "starred",
+              "displayName": "starred",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "trashed",
+              "displayName": "trashed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "explicitlyTrashed",
+              "displayName": "explicitlyTrashed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "parents",
+              "displayName": "parents",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "spaces",
+              "displayName": "spaces",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "version",
+              "displayName": "version",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "webContentLink",
+              "displayName": "webContentLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "webViewLink",
+              "displayName": "webViewLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "iconLink",
+              "displayName": "iconLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "hasThumbnail",
+              "displayName": "hasThumbnail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "thumbnailVersion",
+              "displayName": "thumbnailVersion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "viewedByMe",
+              "displayName": "viewedByMe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "createdTime",
+              "displayName": "createdTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "modifiedTime",
+              "displayName": "modifiedTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "modifiedByMeTime",
+              "displayName": "modifiedByMeTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "modifiedByMe",
+              "displayName": "modifiedByMe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "owners",
+              "displayName": "owners",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "lastModifyingUser",
+              "displayName": "lastModifyingUser",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "shared",
+              "displayName": "shared",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ownedByMe",
+              "displayName": "ownedByMe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "downloadRestrictions",
+              "displayName": "downloadRestrictions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "capabilities",
+              "displayName": "capabilities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "viewersCanCopyContent",
+              "displayName": "viewersCanCopyContent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "copyRequiresWriterPermission",
+              "displayName": "copyRequiresWriterPermission",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "writersCanShare",
+              "displayName": "writersCanShare",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "permissions",
+              "displayName": "permissions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "permissionIds",
+              "displayName": "permissionIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "originalFilename",
+              "displayName": "originalFilename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fullFileExtension",
+              "displayName": "fullFileExtension",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fileExtension",
+              "displayName": "fileExtension",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "md5Checksum",
+              "displayName": "md5Checksum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "sha1Checksum",
+              "displayName": "sha1Checksum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "sha256Checksum",
+              "displayName": "sha256Checksum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "size",
+              "displayName": "size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "quotaBytesUsed",
+              "displayName": "quotaBytesUsed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "headRevisionId",
+              "displayName": "headRevisionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "isAppAuthorized",
+              "displayName": "isAppAuthorized",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "clientEncryptionDetails",
+              "displayName": "clientEncryptionDetails",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "linkShareMetadata",
+              "displayName": "linkShareMetadata",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "inheritedPermissionsDisabled",
+              "displayName": "inheritedPermissionsDisabled",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
             }
           ],
           "attemptToConvertTypes": false,
@@ -457,7 +916,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        512,
+        720,
         -112
       ],
       "id": "23ed4001-17e5-41e4-9467-3dc8d3233ba1",
@@ -521,7 +980,7 @@
       "type": "n8n-nodes-base.todoist",
       "typeVersion": 2.2,
       "position": [
-        704,
+        912,
         -16
       ],
       "id": "fccb1f86-053d-44d9-b159-6582c5f68342",
@@ -655,7 +1114,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        896,
+        1104,
         -16
       ],
       "id": "8feaac5c-3082-4519-8ee8-93ec5fd9b2b9",
@@ -663,6 +1122,36 @@
       "credentials": {
         "googleApi": {
           "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "={{ $('Gmail Trigger').item.binary.attachment_0 }}",
+        "name": "=water {{ $json['Invoice Date'] }}.pdf",
+        "driveId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        304,
+        0
+      ],
+      "id": "2f7ba784-01cc-4382-962e-f3aa7dc34380",
+      "name": "Upload invoice to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Google Drive account"
         }
       }
     }
@@ -684,7 +1173,7 @@
       "main": [
         [
           {
-            "node": "Required fields found?",
+            "node": "Upload invoice to Drive",
             "type": "main",
             "index": 0
           }
@@ -775,6 +1264,17 @@
         [
           {
             "node": "Write meter reading task ID to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload invoice to Drive": {
+      "main": [
+        [
+          {
+            "node": "Required fields found?",
             "type": "main",
             "index": 0
           }
